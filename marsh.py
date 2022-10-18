@@ -3,6 +3,7 @@ from flask_marshmallow import Marshmallow
 from db import *
 from users import Users, user_schema, users_schema
 from organizations import Organizations, organization_schema, organizations_schema
+from sqlalchemy.exc import IntegrityError
 
 app = Flask(__name__)
 
@@ -59,14 +60,18 @@ def user_add():
   # new_user = Users(first_name, last_name, email, phone, city, state, org_id, active)
   # db.session.add(new_user)
   # db.session.commit()
-
-  add_user(first_name, last_name, email, phone, city, state, org_id, active)
-
-  return jsonify("user created"), 201
+  try:
+    response = add_user(first_name, last_name, email, phone, city, state, org_id, active)
+    return response
+  except IntegrityError:
+    return jsonify("duplicate value for unique key"), 400
 
 def add_user(first_name, last_name, email, phone, city, state, org_id, active):
   new_user = Users(first_name, last_name, email, phone, city, state, org_id, active)
+  
+  db.session.add(new_user)
 
+  db.session.commit()
   return jsonify(user_schema.dump(new_user)), 200
 
 @app.route('/user/update/<user_id>', methods=['POST','PUT'])
@@ -109,7 +114,7 @@ def deactivate_user(user_id):
 
   return jsonify(user_schema.dump(user)), 200
 
-@app.route('user/delete/<user_id>')
+@app.route('/user/delete/<user_id>')
 def delete_user(user_id):
   user = db.session.query(Users).filter(Users.user_id == user_id).first()
 
@@ -141,12 +146,12 @@ def org_add():
     active = post_data.get('active')
 
     add_org(name,phone, city, state, active)
-
+    db.session.commit()
     return jsonify("Org created"), 201
 
 def add_org(name, phone, city, state, active):
     new_org = Organizations(name, phone, city, state, active)
-    
+    db.session.commit()
     return jsonify(organization_schema.dump(new_org)), 200
 
 @app.route('/org/update/<org_id>', methods=['POST', 'PUT'])
@@ -190,7 +195,7 @@ def deactivate_org(org_id):
 
   return jsonify(organization_schema.dump(organization)),200
 
-@app.route('org/delete/<user_id>')
+@app.route('/org/delete/<user_id>')
 def delete_org(org_id):
   organization = db.session.query(Users).filter(Users.org_id == org_id).first()
 
