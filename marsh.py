@@ -4,6 +4,7 @@ from db import *
 from users import Users, user_schema, users_schema
 from organizations import Organizations, organization_schema, organizations_schema
 from sqlalchemy.exc import IntegrityError
+# pipenv install flask_marshmallow marshmallow
 
 app = Flask(__name__)
 
@@ -144,13 +145,17 @@ def org_add():
     city = post_data.get('city')
     state = post_data.get('state')  
     active = post_data.get('active')
-
-    add_org(name,phone, city, state, active)
-    db.session.commit()
-    return jsonify("Org created"), 201
+    try:
+      response = add_org(name,phone, city, state, active)
+      return response
+    except IntegrityError:
+      return jsonify("duplicated value for unique key"), 400
 
 def add_org(name, phone, city, state, active):
     new_org = Organizations(name, phone, city, state, active)
+
+    db.session.add(new_org)
+
     db.session.commit()
     return jsonify(organization_schema.dump(new_org)), 200
 
