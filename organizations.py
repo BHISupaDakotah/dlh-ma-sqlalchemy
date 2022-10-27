@@ -14,7 +14,9 @@ class Organizations(db.Model):
   city = db.Column(db.String())
   state = db.Column(db.String())
   active = db.Column(db.Boolean(), default=True)
-  users = db.relationship('Users', backref='organization', lazy=True)
+  # make sure you use caps in and in strings, for the class name, back_populates looks up.
+  # var name = db.relationship('[Class Name]', secondary=[Many:Many table], back_populates='[__tablename__]')
+  users = db.relationship('Users', back_populates='organization', lazy=True)
 
 # how to set values on table fields
   def __init__(self, name, phone, city, state, active):

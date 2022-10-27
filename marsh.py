@@ -4,6 +4,8 @@ from db import *
 from users import Users, user_schema, users_schema
 from organizations import Organizations, organization_schema, organizations_schema
 from sqlalchemy.exc import IntegrityError
+from classes import Classes, class_schema, classes_schema
+# delete pip file & piplock file then pipenv shell
 # pipenv install flask_marshmallow marshmallow
 
 app = Flask(__name__)
@@ -122,6 +124,8 @@ def delete_user(user_id):
   db.session.delete(user)
   db.session.commit()
   return jsonify(user_schema.dump(user)), 201
+
+
 @app.route('/orgs/get', methods=['GET'])
 def get_all_active_orgs():
   results = db.session.query(Organizations).filter(Organizations.active == True).all()
@@ -207,6 +211,93 @@ def delete_org(org_id):
   db.session.delete(organization)
   db.session.commit()
   return jsonify(organization_schema.dump(organization)),201
+
+@app.route('/classes/get', methods=['GET'])
+def get_all_active_classes():
+  classes = db.session.query(Classes).filter(Classes.active == True).all()
+
+  return jsonify(classes_schema.dump(classes)), 200
+
+@app.route('/class/<class_id>', methods=['GET'])
+def get_class_by_id(class_id):
+
+  result = db.session.query(Classes).filter(Classes.class_id == class_id).first()
+
+  return jsonify(class_schema.dump(result))
+
+@app.route('/class/add', methods=['POST'])
+def class_add():
+  post_data = request.json
+  if not post_data:
+    post_data.request.form
+
+  name = post_data.get('name')
+  credit = post_data.get('credit')
+  active = post_data.get('active')
+
+  try:
+    response = add_class(name, credit, active)
+    return response
+  except IntegrityError:
+    return jsonify("duplicate value for unique key"), 400
+
+def add_class(name, credit, active):
+  new_class = Classes(name, credit, active)
+
+  db.session.add(new_class)
+
+  db.session.commit()
+  return jsonify(class_schema.dump(new_class)), 200
+
+@app.route('/class/update/<class_id>', methods=['POST','PUT'])
+def class_update(class_id):
+  result = db.session.query(Classes).filter(Classes.class_id == class_id).first()
+
+  if not result:
+    return("sorry dude no class"), 404
+
+  post_data = request.json
+  if not post_data:
+    post_data = post_data.form
+  
+  populate_object(result, post_data)
+  db.session.commit()
+
+  return jsonify(class_schema.dump(result)), 200
+
+@app.route('/class/activate/<class_id>', methods=['GET'])
+def activate_class(class_id):
+  result = db.session.query(Classes).filter(Classes.class_id == class_id).first()
+
+  if not result:
+    return(f'no user with {class_id} id')
+
+  result.active = True
+  db.session.commit()
+
+  return jsonify(class_schema.dump(result))
+
+@app.route('/class/deactivate/<class_id>', methods=['GET'])
+def deactivate_class(class_id):
+  result = db.session.query(Classes).filter(Classes.class_id == class_id).first()
+
+  if not result:
+    return(f'no user with {class_id} id')
+
+  result.active = False
+  db.session.commit()
+
+  return jsonify(class_schema.dump(result))
+
+@app.route('/class/delete/<class_id>', methods=['GET'])
+def delete_class(class_id):
+  result = db.session.query(Classes).filter(Classes.class_id == class_id).first()
+
+  db.session.delete(result)
+  db.session.commit()
+
+  return jsonify(class_schema.dump(result))
+
 # ---
 if __name__ == '__main__':
   create_all()
